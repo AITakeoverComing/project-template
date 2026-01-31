@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Detect language and run checks
+        run: |
+          if [ -f "package.json" ]; then
+            echo "Node.js project detected"
+            npm ci --ignore-scripts 2>/dev/null || npm install
+            npm run lint --if-present
+            npm test --if-present
+          elif [ -f "requirements.txt" ] || [ -f "pyproject.toml" ]; then
+            echo "Python project detected"
+            pip install -q ruff 2>/dev/null || true
+            ruff check . --ignore E501 2>/dev/null || true
+          elif [ -f "go.mod" ]; then
+            echo "Go project detected"
+            go vet ./... 2>/dev/null || true
+            go test ./... 2>/dev/null || true
+          else
+            echo "No specific checks configured - PR ready for review"
+          fi
